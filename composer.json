@@ -1,0 +1,38 @@
+{
+    "name": "jsdevart/laravel-file-vault",
+    "description": "Private file storage for Laravel with signed URLs and multi-context.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "laravel",
+        "file-storage",
+        "private-files",
+        "signed-url",
+        "s3",
+        "file-upload"
+    ],
+    "authors": [
+        {
+            "name": "JSDevArt",
+            "email": "packages@jsdevart.com"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "laravel/framework": "^11.0 || ^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "JSDevArt\\LaravelFileVault\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "JSDevArt\\LaravelFileVault\\FileVaultServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
