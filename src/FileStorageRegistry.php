@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace YourVendor\LaravelFileVault;
+namespace JSDevArt\LaravelFileVault;
 
 use InvalidArgumentException;
-use YourVendor\LaravelFileVault\Contracts\FileStorageInterface;
+use JSDevArt\LaravelFileVault\Contracts\FileStorageInterface;
 
 final class FileStorageRegistry
 {

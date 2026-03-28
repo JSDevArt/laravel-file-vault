@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace YourVendor\LaravelFileVault;
+namespace JSDevArt\LaravelFileVault;
 
 use Illuminate\Support\ServiceProvider;
 

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace YourVendor\LaravelFileVault\Services;
+namespace JSDevArt\LaravelFileVault\Services;
 
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
-use YourVendor\LaravelFileVault\Contracts\FileStorageInterface;
+use JSDevArt\LaravelFileVault\Contracts\FileStorageInterface;
 
 abstract class BaseFileStorageService implements FileStorageInterface
 {

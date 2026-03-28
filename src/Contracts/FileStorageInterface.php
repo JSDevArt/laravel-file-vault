@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace YourVendor\LaravelFileVault\Contracts;
+namespace JSDevArt\LaravelFileVault\Contracts;
 
 interface FileStorageInterface
 {
