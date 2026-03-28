@@ -18,7 +18,7 @@ abstract class BaseFileStorageService implements FileStorageInterface
 
     public function __construct(protected string $context)
     {
-        $this->disk    = config('file-vault.disk', config('filesystems.default'));
+        $this->disk    = config('file-vault.disk') ?? config('filesystems.default');
         $this->storage = Storage::disk($this->disk);
     }
 
