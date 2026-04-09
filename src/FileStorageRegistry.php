@@ -5,69 +5,50 @@ declare(strict_types=1);
 namespace JSDevArt\LaravelFileVault;
 
 use InvalidArgumentException;
-use JSDevArt\LaravelFileVault\Contracts\FileStorageInterface;
+use JSDevArt\LaravelFileVault\Services\BaseFileStorageService;
 
-final class FileStorageRegistry
+class FileStorageRegistry
 {
-    /** @var array<string, class-string<FileStorageInterface>> */
-    private static array $bindings = [];
-
-    /** @var array<string, FileStorageInterface> */
-    private static array $instances = [];
+    /** @var array<string, BaseFileStorageService> */
+    private array $services = [];
 
     /**
-     * Register a storage service class for a given context key.
+     * Register a storage service instance under the given name.
      *
-     * Call this from your AppServiceProvider::register() method:
+     * Call this from your AppServiceProvider::boot() method:
      *
-     *   FileStorageRegistry::register('user', UserStorageService::class);
+     *   app(FileStorageRegistry::class)->register(
+     *       'imports',
+     *       new ImportStorageService(disk: 's3', context: 'imports'),
+     *   );
      */
-    public static function register(string $key, string $serviceClass): void
+    public function register(string $name, BaseFileStorageService $service): void
     {
-        self::$bindings[$key] = $serviceClass;
-        unset(self::$instances[$key]); // invalidate cached instance if re-registered
+        $this->services[$name] = $service;
     }
 
     /**
-     * Resolve the storage service for the given context key.
+     * Returns true if a service has been registered under the given name.
      */
-    public static function get(string $key): FileStorageInterface
+    public function has(string $name): bool
     {
-        if (! isset(self::$instances[$key])) {
-            self::$instances[$key] = self::createService($key);
-        }
-
-        return self::$instances[$key];
+        return isset($this->services[$name]);
     }
 
     /**
-     * Returns all registered context keys.
+     * Resolve the storage service registered under the given name.
      *
-     * @return string[]
+     * @throws InvalidArgumentException if no service has been registered for $name.
      */
-    public static function keys(): array
+    public function get(string $name): BaseFileStorageService
     {
-        return array_keys(self::$bindings);
-    }
-
-    /**
-     * Clears all bindings and instances (useful for testing).
-     */
-    public static function flush(): void
-    {
-        self::$bindings  = [];
-        self::$instances = [];
-    }
-
-    private static function createService(string $key): FileStorageInterface
-    {
-        if (! isset(self::$bindings[$key])) {
+        if (! isset($this->services[$name])) {
             throw new InvalidArgumentException(
-                "No storage service registered for context [{$key}]. ".
-                'Register one via FileStorageRegistry::register() in your AppServiceProvider.'
+                "No file storage service registered with name [{$name}]. ".
+                'Register one via app(FileStorageRegistry::class)->register() in your AppServiceProvider.'
             );
         }
 
-        return new (self::$bindings[$key])();
+        return $this->services[$name];
     }
 }

@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use JSDevArt\LaravelFileVault\Contracts\FileStorageInterface;
+use JSDevArt\LaravelFileVault\Support\FilePathResult;
+use JSDevArt\LaravelFileVault\Support\TemporaryFile;
 
 abstract class BaseFileStorageService implements FileStorageInterface
 {
@@ -16,9 +18,11 @@ abstract class BaseFileStorageService implements FileStorageInterface
 
     protected Filesystem $storage;
 
-    public function __construct(protected string $context)
-    {
-        $this->disk    = config('file-vault.disk') ?? config('filesystems.default');
+    public function __construct(
+        protected string $context,
+        ?string $disk = null,
+    ) {
+        $this->disk    = $disk ?? config('file-vault.disk') ?? config('filesystems.default');
         $this->storage = Storage::disk($this->disk);
     }
 
@@ -114,6 +118,45 @@ abstract class BaseFileStorageService implements FileStorageInterface
         ]);
 
         return $deleted;
+    }
+
+    /**
+     * Return an absolute on-disk path usable by libraries that require a real file path
+     * (e.g. spatie/simple-excel, PhpSpreadsheet).
+     *
+     * - Local disk: returns the absolute path directly via Storage::path().
+     * - Remote disk (S3, GCS, …): downloads the file to a temp file and returns that path.
+     *   Keep the returned FilePathResult in scope for as long as you need the path —
+     *   the temporary file is deleted automatically when the object is garbage-collected.
+     *
+     * Returns null if the file does not exist.
+     */
+    public function getPath(string $path): ?FilePathResult
+    {
+        $pathWithContext = $this->context !== ''
+            ? $this->context.'/'.$path
+            : $path;
+
+        if (! $this->storage->exists($pathWithContext)) {
+            return null;
+        }
+
+        $driver = config("filesystems.disks.{$this->disk}.driver");
+
+        if ($driver === 'local') {
+            return new FilePathResult(path: $this->storage->path($pathWithContext));
+        }
+
+        $extension = pathinfo($path, PATHINFO_EXTENSION);
+        $contents  = $this->storage->get($pathWithContext);
+
+        if ($contents === null) {
+            return null;
+        }
+
+        $temp = new TemporaryFile($extension, $contents);
+
+        return new FilePathResult(path: $temp->path, temp: $temp);
     }
 
     /**

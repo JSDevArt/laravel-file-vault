@@ -82,10 +82,23 @@ In your `AppServiceProvider`:
 use JSDevArt\LaravelFileVault\FileStorageRegistry;
 use App\Services\Storage\UserStorageService;
 
-public function register(): void
+public function boot(): void
 {
-    FileStorageRegistry::register('user', UserStorageService::class);
+    app(FileStorageRegistry::class)->register(
+        'user',
+        new UserStorageService(),
+    );
 }
+```
+
+You can also pass a custom disk per registration, without creating a subclass:
+
+```php
+// Uses the named-argument form of the parent constructor
+app(FileStorageRegistry::class)->register(
+    'imports',
+    new ImportStorageService(disk: 's3', context: 'imports'),
+);
 ```
 
 ### 3. Use in your controllers
@@ -94,18 +107,18 @@ public function register(): void
 use JSDevArt\LaravelFileVault\FileStorageRegistry;
 
 // Store a file
-$service = FileStorageRegistry::get('user');
+$service = app(FileStorageRegistry::class)->get('user');
 $path = $service->store('picture', $request->file('photo')->get(), 'jpg');
 $user->update(['photo_path' => $path]);
 
 // Generate a signed URL (expires per config)
-$url = FileStorageRegistry::get('user')->getUrl($user->photo_path);
+$url = app(FileStorageRegistry::class)->get('user')->getUrl($user->photo_path);
 
 // Delete a file
-FileStorageRegistry::get('user')->delete($user->photo_path);
+app(FileStorageRegistry::class)->get('user')->delete($user->photo_path);
 
 // Check existence
-FileStorageRegistry::get('user')->exists($user->photo_path);
+app(FileStorageRegistry::class)->get('user')->exists($user->photo_path);
 ```
 
 ### 4. Display the URL in a view or API response
@@ -115,9 +128,54 @@ FileStorageRegistry::get('user')->exists($user->photo_path);
 public function getPhotoUrlAttribute(): ?string
 {
     return $this->photo_path
-        ? FileStorageRegistry::get('user')->getUrl($this->photo_path)
+        ? app(FileStorageRegistry::class)->get('user')->getUrl($this->photo_path)
         : null;
 }
+```
+
+### 5. Get an absolute on-disk path (`getPath`)
+
+Some libraries (e.g. `spatie/simple-excel`, PhpSpreadsheet) require a real file-system path rather than file contents. Use `getPath()` to get one regardless of where the file lives:
+
+```php
+use JSDevArt\LaravelFileVault\FileStorageRegistry;
+
+$storage = app(FileStorageRegistry::class)->get('imports');
+
+// Returns FilePathResult|null  (null when the file does not exist)
+$result = $storage->getPath($filePath);
+
+if ($result === null) {
+    abort(404);
+}
+
+// Keep $result in scope for as long as you need $result->path.
+// If the file lives on a remote disk the package created a local temp file;
+// it is deleted automatically when $result goes out of scope.
+$rows = SimpleExcelReader::create($result->path)
+    ->headersToSnakeCase()
+    ->getRows()
+    ->collect();
+```
+
+**How it works:**
+
+| Disk driver | Behaviour |
+|---|---|
+| `local` | Returns the absolute path directly via `Storage::path()` — no copy is made. |
+| Remote (S3, GCS, …) | Downloads the file to a temp file in `sys_get_temp_dir()`. The original file extension is preserved so format-detection (`.xlsx`, `.csv`, …) works correctly. |
+
+**Why `FilePathResult` instead of a plain string?**
+
+The temp file's lifetime is tied to the `FilePathResult` object. If you extracted just the path string — `$path = $storage->getPath($file)->path` — the result object would be immediately garbage-collected, deleting the temp file before you use it. Keeping the full object in a named variable prevents that.
+
+```php
+// Correct — $result stays alive while $result->path is used
+$result = $storage->getPath($file);
+process($result->path);
+
+// Incorrect — temp file deleted before process() runs
+process($storage->getPath($file)->path);
 ```
 
 ## Serving private files (local disk)

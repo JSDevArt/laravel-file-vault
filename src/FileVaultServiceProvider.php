@@ -14,6 +14,8 @@ class FileVaultServiceProvider extends ServiceProvider
             __DIR__.'/../config/file-vault.php',
             'file-vault'
         );
+
+        $this->app->singleton(FileStorageRegistry::class);
     }
 
     public function boot(): void
