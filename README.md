@@ -10,7 +10,7 @@ Private file storage for Laravel with signed URLs, multi-context organization, a
 ## Installation
 
 ```bash
-composer require your-vendor/laravel-file-vault
+composer require jsdevart/laravel-file-vault
 ```
 
 The package registers itself automatically via Laravel's package discovery.
@@ -50,7 +50,7 @@ Copy `stubs/ExampleStorageService.php` into your application and adjust it:
 
 namespace App\Services\Storage;
 
-use YourVendor\LaravelFileVault\Services\BaseFileStorageService;
+use JSDevArt\LaravelFileVault\Services\BaseFileStorageService;
 
 class UserStorageService extends BaseFileStorageService
 {
@@ -79,7 +79,7 @@ Example: `user/pictures/aB/cD/3f2a...uuid.jpg`
 In your `AppServiceProvider`:
 
 ```php
-use YourVendor\LaravelFileVault\FileStorageRegistry;
+use JSDevArt\LaravelFileVault\FileStorageRegistry;
 use App\Services\Storage\UserStorageService;
 
 public function register(): void
@@ -91,7 +91,7 @@ public function register(): void
 ### 3. Use in your controllers
 
 ```php
-use YourVendor\LaravelFileVault\FileStorageRegistry;
+use JSDevArt\LaravelFileVault\FileStorageRegistry;
 
 // Store a file
 $service = FileStorageRegistry::get('user');
@@ -124,6 +124,8 @@ public function getPhotoUrlAttribute(): ?string
 
 The package does **not** provide a controller. You are responsible for implementing the route that streams private files. This gives you full control over middleware, authorization, and response headers.
 
+The example below uses the same disk as File Vault (`file-vault.disk` or your default filesystem disk). It assumes a **local** (or otherwise path-based) disk, because `Storage::disk(...)->path()` is not meaningful for pure S3-style drivers.
+
 Reference implementation:
 
 ```php
@@ -137,13 +139,14 @@ Route::get('/files/{path}', function (Request $request, string $path) {
         abort(403);
     }
 
+    $disk    = config('file-vault.disk') ?? config('filesystems.default');
     $decoded = base64_decode($path);
 
-    if (! $decoded || ! Storage::disk('local')->exists($decoded)) {
+    if (! $decoded || ! Storage::disk($disk)->exists($decoded)) {
         abort(404);
     }
 
-    $filePath = Storage::disk('local')->path($decoded);
+    $filePath = Storage::disk($disk)->path($decoded);
     $mimeType = mime_content_type($filePath) ?: 'application/octet-stream';
 
     return response()->stream(function () use ($filePath) {
@@ -152,7 +155,7 @@ Route::get('/files/{path}', function (Request $request, string $path) {
         fclose($stream);
     }, 200, [
         'Content-Type'        => $mimeType,
-        'Content-Length'      => Storage::disk('local')->size($decoded),
+        'Content-Length'      => Storage::disk($disk)->size($decoded),
         'Cache-Control'       => 'private, max-age=3600',
         'Content-Disposition' => 'inline; filename="'.basename($decoded).'"',
     ]);

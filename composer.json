@@ -17,6 +17,11 @@
             "email": "packages@jsdevart.com"
         }
     ],
+    "homepage": "https://github.com/JSDevArt/laravel-file-vault",
+    "support": {
+        "issues": "https://github.com/JSDevArt/laravel-file-vault/issues",
+        "source": "https://github.com/JSDevArt/laravel-file-vault"
+    },
     "require": {
         "php": "^8.2",
         "laravel/framework": "^11.0 || ^12.0 || ^13.0"
