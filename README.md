@@ -4,8 +4,8 @@ Private file storage for Laravel with signed URLs, multi-context organization, a
 
 ## Requirements
 
-- PHP 8.2+
-- Laravel 11 or 12
+- PHP 8.2+ for Laravel 11–12; **PHP 8.4+** when you use Laravel 13 (Symfony 8 components require it)
+- Laravel 11, 12, or 13
 
 ## Installation
 
