@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use JSDevArt\LaravelFileVault\Contracts\FileStorageInterface;
 use JSDevArt\LaravelFileVault\Support\FilePathResult;
+use JSDevArt\LaravelFileVault\Support\ServeSignedRoutePolicy;
 use JSDevArt\LaravelFileVault\Support\TemporaryFile;
 
 abstract class BaseFileStorageService implements FileStorageInterface
@@ -22,7 +23,7 @@ abstract class BaseFileStorageService implements FileStorageInterface
         protected string $context,
         ?string $disk = null,
     ) {
-        $this->disk    = $disk ?? config('file-vault.disk') ?? config('filesystems.default');
+        $this->disk = $disk ?? config('file-vault.disk') ?? config('filesystems.default');
         $this->storage = Storage::disk($this->disk);
     }
 
@@ -32,9 +33,9 @@ abstract class BaseFileStorageService implements FileStorageInterface
     public function get(string $path): ?string
     {
         logger()->debug('[FileVault] get', [
-            'path'    => $path,
+            'path' => $path,
             'context' => $this->context,
-            'exists'  => $this->storage->exists($this->context.'/'.$path),
+            'exists' => $this->storage->exists($this->context.'/'.$path),
         ]);
 
         return $this->storage->get($this->context.'/'.$path);
@@ -53,14 +54,14 @@ abstract class BaseFileStorageService implements FileStorageInterface
      */
     public function store(string $element, string $filecontents, string $extension): string
     {
-        $fullpath          = $this->buildPath($element, $extension);
+        $fullpath = $this->buildPath($element, $extension);
         $path_with_context = $this->context.'/'.$fullpath;
-        $stored            = $this->storage->put($path_with_context, $filecontents);
+        $stored = $this->storage->put($path_with_context, $filecontents);
 
         logger()->debug('[FileVault] store', [
             'fullpath' => $fullpath,
-            'success'  => $stored,
-            'context'  => $this->context,
+            'success' => $stored,
+            'context' => $this->context,
         ]);
 
         return $fullpath;
@@ -81,7 +82,10 @@ abstract class BaseFileStorageService implements FileStorageInterface
             return null;
         }
 
-        if ($this->disk === 'local') {
+        $driver = config("filesystems.disks.{$this->disk}.driver", 'local');
+        $forceServeRoute = (bool) config('file-vault.force_serve_route', false);
+
+        if (ServeSignedRoutePolicy::shouldServeViaSignedRoute($driver, $forceServeRoute)) {
             return URL::temporarySignedRoute(
                 config('file-vault.serve_route', 'files.serve'),
                 now()->addMinutes($this->getUrlExpiryMinutes()),
@@ -109,10 +113,10 @@ abstract class BaseFileStorageService implements FileStorageInterface
         }
 
         $path_with_context = $this->context.'/'.$path;
-        $deleted           = $this->storage->delete($path_with_context);
+        $deleted = $this->storage->delete($path_with_context);
 
         logger()->debug('[FileVault] delete', [
-            'path'    => $path,
+            'path' => $path,
             'success' => $deleted,
             'context' => $this->context,
         ]);
@@ -148,7 +152,7 @@ abstract class BaseFileStorageService implements FileStorageInterface
         }
 
         $extension = pathinfo($path, PATHINFO_EXTENSION);
-        $contents  = $this->storage->get($pathWithContext);
+        $contents = $this->storage->get($pathWithContext);
 
         if ($contents === null) {
             return null;
@@ -178,9 +182,9 @@ abstract class BaseFileStorageService implements FileStorageInterface
      */
     private function buildPath(string $element, string $extension): string
     {
-        $folder1   = $this->generateRandomFolderName();
-        $folder2   = $this->generateRandomFolderName();
-        $uuid      = Str::uuid()->toString();
+        $folder1 = $this->generateRandomFolderName();
+        $folder2 = $this->generateRandomFolderName();
+        $uuid = Str::uuid()->toString();
         $cleanUuid = str_replace('-', '', strtolower($uuid));
 
         return $this->buildBasePath($element).'/'.$folder1.'/'.$folder2.'/'.$cleanUuid.'.'.$extension;

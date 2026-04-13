@@ -6,6 +6,7 @@ declare(strict_types=1);
  * Template: copy into your application (e.g. app/Services/Storage/UserStorageService.php),
  * rename the class, and fix the namespace to match your app.
  */
+
 namespace App\Services\Storage;
 
 use JSDevArt\LaravelFileVault\Services\BaseFileStorageService;
@@ -20,9 +21,9 @@ class ExampleStorageService extends BaseFileStorageService
     protected function buildBasePath(string $element): string
     {
         return match ($element) {
-            'picture'  => 'pictures',
+            'picture' => 'pictures',
             'document' => 'documents',
-            default    => $element,
+            default => $element,
         };
     }
 }

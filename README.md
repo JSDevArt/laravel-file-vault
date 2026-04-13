@@ -29,7 +29,8 @@ php artisan vendor:publish --tag=file-vault-config
 |---|---|---|
 | `disk` | `null` (uses `filesystems.default`) | Storage disk to use (`local`, `s3`, etc.) |
 | `expiry_minutes` | `60` | Signed URL expiry time in minutes |
-| `serve_route` | `files.serve` | Route name that serves private files (local disk only) |
+| `force_serve_route` | `false` | If `true`, `getUrl()` always uses the app signed route (see below) instead of S3 presigned URLs |
+| `serve_route` | `files.serve` | Route name that serves private files when using the signed route |
 
 Environment variables:
 
@@ -37,7 +38,10 @@ Environment variables:
 FILE_VAULT_DISK=local
 FILE_VAULT_EXPIRY_MINUTES=60
 FILE_VAULT_SERVE_ROUTE=files.serve
+FILE_VAULT_FORCE_SERVE_ROUTE=false
 ```
+
+Set `FILE_VAULT_FORCE_SERVE_ROUTE=true` when your storage disk uses an **internal** endpoint (for example MinIO or S3 at a Docker-only hostname). Presigned URLs would point at that host and fail in the browser; forcing the signed route makes `getUrl()` return an URL on your app, which can stream the file via `Storage` in your serve controller.
 
 ## Usage
 
@@ -222,4 +226,4 @@ Route::get('/files/{path}', function (Request $request, string $path) {
 
 Make sure the route name matches `file-vault.serve_route` in your config (default: `files.serve`).
 
-For **S3** (and other cloud disks), `getUrl()` delegates to the driver's native `temporaryUrl()` — no route needed.
+For **S3** (and other cloud disks), `getUrl()` normally delegates to the driver's native `temporaryUrl()`. With `force_serve_route` enabled, it uses the same signed app route as the local driver so you can proxy the object through Laravel.
